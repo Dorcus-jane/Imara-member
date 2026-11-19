@@ -1,0 +1,30 @@
+mutation CreateAll @transaction @auth(level: USER) {
+  author_insert(data: { name: "Author Name", bio: "Bio content" })
+  book_insert(data: { title: "Title", isbn: "12345", author: { id: "550e8400-e29b-41d4-a716-446655440000" } })
+  member_insert(data: { firstName: "Jane", lastName: "Doe", email: "jane@example.com" })
+  loan_insert(data: { book: { id: "550e8400-e29b-41d4-a716-446655440001" }, member: { id: "550e8400-e29b-41d4-a716-446655440002" }, loanDate: "2023-10-01T10:00:00Z", dueDate: "2023-11-01T10:00:00Z" })
+}
+
+mutation UpdateAndDelete @transaction @auth(level: USER) {
+  author_update(key: { id: "550e8400-e29b-41d4-a716-446655440000" }, data: { bio: "Updated bio" })
+  book_update(key: { id: "550e8400-e29b-41d4-a716-446655440001" }, data: { title: "New Title" })
+  member_update(key: { id: "550e8400-e29b-41d4-a716-446655440002" }, data: { firstName: "Updated" })
+  loan_update(key: { id: "550e8400-e29b-41d4-a716-446655440003" }, data: { returnDate: "2023-10-25T10:00:00Z" })
+  
+  author_delete(key: { id: "550e8400-e29b-41d4-a716-446655440000" })
+  book_delete(key: { id: "550e8400-e29b-41d4-a716-446655440001" })
+  member_delete(key: { id: "550e8400-e29b-41d4-a716-446655440002" })
+  loan_delete(key: { id: "550e8400-e29b-41d4-a716-446655440003" })
+}
+
+query ReadData @auth(level: PUBLIC, insecureReason: "Library catalog data is public.") {
+  authors { name bio }
+  books { title isbn }
+  members { firstName lastName email }
+  loans { loanDate dueDate returnDate }
+  
+  author(key: { id: "550e8400-e29b-41d4-a716-446655440000" }) { name }
+  book(key: { id: "550e8400-e29b-41d4-a716-446655440001" }) { title }
+  member(key: { id: "550e8400-e29b-41d4-a716-446655440002" }) { email }
+  loan(key: { id: "550e8400-e29b-41d4-a716-446655440003" }) { loanDate }
+}

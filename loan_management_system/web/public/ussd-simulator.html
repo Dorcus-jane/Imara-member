@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Imara SACCO USSD Simulator</title>
+    <style>
+      :root { color-scheme: light; font-family: Arial, sans-serif; color: #17352b; background: #f1f5f2; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 32px 16px; }
+      main { width: min(100%, 560px); margin: 0 auto; }
+      h1 { margin: 0 0 8px; font-size: 1.65rem; }
+      p { color: #5b6d64; line-height: 1.5; }
+      .panel { padding: 22px; background: white; border: 1px solid #dce5df; border-radius: 14px; box-shadow: 0 8px 26px #17352b0d; }
+      label { display: block; margin: 14px 0 6px; font-size: .9rem; font-weight: 700; }
+      input { width: 100%; padding: 11px 12px; border: 1px solid #cbd8d0; border-radius: 8px; font: inherit; }
+      button { padding: 11px 15px; border: 0; border-radius: 8px; background: #176844; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+      button:disabled { opacity: .5; cursor: not-allowed; }
+      .actions { display: flex; gap: 10px; margin-top: 16px; }
+      .secondary { background: #e8efeb; color: #17352b; }
+      .screen { min-height: 150px; margin-top: 20px; padding: 16px; border: 1px solid #dce5df; border-radius: 10px; background: #f9fbf9; }
+      .screen pre { margin: 0; white-space: pre-wrap; font: 1rem/1.55 ui-monospace, Consolas, monospace; }
+      .status { min-height: 1.4em; margin: 12px 0 0; color: #a3362f; font-size: .9rem; }
+      .hint { margin-top: 14px; font-size: .85rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>USSD Simulator</h1>
+      <p>Test the <strong>*123#</strong> menu using a registered member phone number. Each submission sends the cumulative Africa’s Talking-style <code>text</code> value.</p>
+      <section class="panel" aria-label="USSD session">
+        <label for="endpoint">Local Functions Emulator URL</label>
+        <input id="endpoint" type="url" />
+        <label for="phone">Member phone number</label>
+        <input id="phone" type="tel" value="+256" autocomplete="tel" />
+        <div class="screen" aria-live="polite"><pre id="screen">Start a session to see the USSD menu.</pre></div>
+        <form id="reply-form" hidden>
+          <label for="reply">Your response</label>
+          <input id="reply" inputmode="numeric" autocomplete="off" />
+          <div class="actions">
+            <button id="send" type="submit">Send</button>
+            <button id="restart" class="secondary" type="button">New session</button>
+          </div>
+        </form>
+        <div id="start-actions" class="actions">
+          <button id="start" type="button">Dial *123#</button>
+        </div>
+        <p id="status" class="status" role="status"></p>
+      </section>
+      <p class="hint">Start the Functions and Firestore emulators from the project root with <code>npx firebase emulators:start --only functions,firestore</code>.</p>
+    </main>
+    <script>
+      const projectId = "wallet-application-1bd18";
+      const endpoint = document.getElementById("endpoint");
+      const phone = document.getElementById("phone");
+      const screen = document.getElementById("screen");
+      const replyForm = document.getElementById("reply-form");
+      const reply = document.getElementById("reply");
+      const start = document.getElementById("start");
+      const startActions = document.getElementById("start-actions");
+      const restart = document.getElementById("restart");
+      const send = document.getElementById("send");
+      const status = document.getElementById("status");
+      endpoint.value = `http://127.0.0.1:5001/${projectId}/us-central1/ussdWebhook`;
+
+      let sessionId = "";
+      let cumulativeText = "";
+      let active = false;
+
+      async function submit(text) {
+        status.textContent = "";
+        send.disabled = true;
+        try {
+          const response = await fetch(endpoint.value.trim(), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              serviceCode: "*123#",
+              phoneNumber: phone.value.trim(),
+              text,
+            }),
+          });
+          const message = (await response.text()).trim();
+          screen.textContent = message || "No response received.";
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          active = message.startsWith("CON ");
+          replyForm.hidden = !active;
+          startActions.hidden = active;
+          if (active) {
+            reply.value = "";
+            reply.focus();
+          }
+        } catch (error) {
+          status.textContent = `Could not reach the emulator: ${error.message}`;
+          active = false;
+          replyForm.hidden = true;
+          startActions.hidden = false;
+        } finally {
+          send.disabled = false;
+        }
+      }
+
+      function startSession() {
+        if (!phone.value.trim()) {
+          status.textContent = "Enter the registered member phone number first.";
+          return;
+        }
+        sessionId = `sim-${crypto.randomUUID()}`;
+        cumulativeText = "";
+        submit(cumulativeText);
+      }
+
+      start.addEventListener("click", startSession);
+      restart.addEventListener("click", startSession);
+      replyForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!active || !reply.value.trim()) return;
+        cumulativeText = cumulativeText ? `${cumulativeText}*${reply.value.trim()}` : reply.value.trim();
+        submit(cumulativeText);
+      });
+    </script>
+  </body>
+</html>

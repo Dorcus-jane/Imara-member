@@ -1,0 +1,22 @@
+mutation SeedData @transaction {
+  author_insertMany(data: [
+    {id: "00000000-0000-4000-a000-000000000001", name: "J.K. Rowling", bio: "British author"},
+    {id: "00000000-0000-4000-a000-000000000002", name: "George R.R. Martin", bio: "American novelist"},
+    {id: "00000000-0000-4000-a000-000000000003", name: "Agatha Christie", bio: "Queen of Crime"}
+  ])
+  book_insertMany(data: [
+    {id: "10000000-0000-4000-b000-000000000001", title: "Harry Potter", isbn: "978-0439708180", authorId: "00000000-0000-4000-a000-000000000001"},
+    {id: "10000000-0000-4000-b000-000000000002", title: "Game of Thrones", isbn: "978-0553103540", authorId: "00000000-0000-4000-a000-000000000002"},
+    {id: "10000000-0000-4000-b000-000000000003", title: "Murder on the Orient Express", isbn: "978-0062073501", authorId: "00000000-0000-4000-a000-000000000003"}
+  ])
+  member_insertMany(data: [
+    {id: "20000000-0000-4000-c000-000000000001", firstName: "Alice", lastName: "Smith", email: "alice@example.com"},
+    {id: "20000000-0000-4000-c000-000000000002", firstName: "Bob", lastName: "Jones", email: "bob@example.com"},
+    {id: "20000000-0000-4000-c000-000000000003", firstName: "Charlie", lastName: "Brown", email: "charlie@example.com"}
+  ])
+  loan_insertMany(data: [
+    {id: "30000000-0000-4000-d000-000000000001", bookId: "10000000-0000-4000-b000-000000000001", memberId: "20000000-0000-4000-c000-000000000001", loanDate: "2023-10-01T00:00:00Z", dueDate: "2023-10-15T00:00:00Z"},
+    {id: "30000000-0000-4000-d000-000000000002", bookId: "10000000-0000-4000-b000-000000000002", memberId: "20000000-0000-4000-c000-000000000002", loanDate: "2023-10-05T00:00:00Z", dueDate: "2023-10-19T00:00:00Z"},
+    {id: "30000000-0000-4000-d000-000000000003", bookId: "10000000-0000-4000-b000-000000000003", memberId: "20000000-0000-4000-c000-000000000003", loanDate: "2023-10-10T00:00:00Z", dueDate: "2023-10-24T00:00:00Z"}
+  ])
+}
