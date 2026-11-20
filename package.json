@@ -28,7 +28,12 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "test:br": "tsc tests/run-all-tests.ts --ignoreConfig --outDir dist-tests --module commonjs --target es2020 --skipLibCheck --ignoreDeprecations 6.0 && node dist-tests/tests/run-all-tests.js",
+    "test:ussd": "node tests/test-ussd.js",
+    "test": "npm run test:br && npm run test:ussd",
+    "ussd": "node scripts/ussd-interactive.js"
   },
   "private": true
 }
