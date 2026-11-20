@@ -16,6 +16,8 @@ const statusColor: Record<LoanStatus, string> = {
   Approved: colors.primary,
   Pending: colors.pending,
   Rejected: colors.danger,
+  Overdue: colors.danger,
+  Defaulted: colors.danger,
 };
 
 function subtitle(loan: Loan): string {
