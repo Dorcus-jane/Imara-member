@@ -27,7 +27,7 @@ export default function OverviewScreen({ navigation }: any) {
     ? ''
     : risk.label === 'Not enough history'
       ? 'Not enough history  ›'
-      : `${risk.score.toFixed(2)} · ${risk.label}  ›`;
+      : `${risk.score}/100 · ${risk.label}  ›`;
   const recent = deposits.slice(0, offline ? 1 : 2);
 
   return (
