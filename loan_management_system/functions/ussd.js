@@ -249,8 +249,10 @@ function menu(name) {
       "1. Check Savings & Loan Balance\n" +
       "2. Deposit via Mobile Money\n" +
       "3. Apply for Quick Loan\n" +
-      "4. Mini Statement (Last 3 Transactions)\n" +
-      "5. Change USSD PIN");
+      "4. Repay Active Loan\n" +
+      "5. Mini Statement (Last 3 Transactions)\n" +
+      "6. Check Credit Score\n" +
+      "7. Change USSD PIN");
 }
 
 function firstName(user) {
@@ -455,6 +457,77 @@ async function createDeposit({
     });
     return end(
         "We could not send a Mobile Money prompt. " +
+        "Contact your SACCO before retrying.");
+  }
+}
+
+async function createRepayment({
+  sessionId,
+  phoneNumber,
+  amount,
+  userRef,
+  user,
+  activeLoan,
+}) {
+  const repaymentId = sessionDocumentId(sessionId, phoneNumber);
+  const repaymentRef = db.collection("repayments").doc(repaymentId);
+  const reference = `USSD-${repaymentId.slice(5, 17).toUpperCase()}`;
+  let created = false;
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(repaymentRef);
+    if (snapshot.exists) {
+      return;
+    }
+    transaction.create(repaymentRef, {
+      userId: userRef.id,
+      memberId: user.memberId,
+      memberName: user.name || "",
+      memberNo: user.memberNo || "",
+      loanId: activeLoan ? activeLoan.id || "" : "",
+      amount,
+      method: "Mobile Money",
+      reference,
+      phone: phoneNumber,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: "USSD",
+      source: "USSD",
+      status: "pending",
+      paymentStatus: "initiating",
+    });
+    created = true;
+  });
+
+  if (!created) {
+    return end("This repayment request was already received.");
+  }
+
+  try {
+    const result = await initiateMobileMoneyCollection({
+      phoneNumber,
+      amount,
+      reference,
+      member: user,
+    });
+    await repaymentRef.update({
+      paymentStatus: "prompt_sent",
+      paymentRequestId: String(result.requestId || result.transactionId || ""),
+      paymentPromptSentAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return end(
+        `Please enter your Mobile Money PIN on the prompt sent to your phone ` +
+        `to complete your loan repayment of UGX ${amount}.`);
+  } catch (error) {
+    await repaymentRef.update({
+      paymentStatus: "failed",
+      paymentError: "collection_request_failed",
+    });
+    logger.error("USSD Mobile Money repayment collection failed", {
+      repaymentId,
+      error: error.message,
+    });
+    return end(
+        "We could not send a Mobile Money repayment prompt. " +
         "Contact your SACCO before retrying.");
   }
 }
@@ -685,6 +758,57 @@ async function handleSession({sessionId, phoneNumber, text}) {
   }
 
   if (option === "4") {
+    const context = await getMemberContext(userRef, user);
+    const activeLoan = context.loans.find((l) => l.status === "active");
+    if (!activeLoan) {
+      return end("You do not have an active loan to repay.");
+    }
+    const balance = asNumber(
+        activeLoan.outstandingBalance !== undefined &&
+        activeLoan.outstandingBalance !== null ?
+          activeLoan.outstandingBalance : activeLoan.amount);
+
+    if (inputs.length === 1) {
+      return continueSession(
+          `Active Loan Balance: UGX ${Math.round(balance)}.\n` +
+          "Enter repayment amount in UGX:");
+    }
+    if (inputs.length === 2) {
+      const amount = Number(inputs[1]);
+      return Number.isSafeInteger(amount) && amount > 0 ?
+        continueSession(
+            `Repay UGX ${amount} via Mobile Money?\n1. Confirm\n2. Cancel`) :
+        end("Enter a valid whole-number amount and dial again.");
+    }
+    if (inputs.length === 3 && /^[12]$/.test(inputs[2])) {
+      return inputs[2] === "2" ?
+        end("Repayment cancelled.") :
+        continueSession("Enter your 4-digit USSD PIN to confirm repayment:");
+    }
+    if (inputs.length !== 4 || inputs[2] !== "1" || !pinIsValid(inputs[3])) {
+      return end("Invalid selection. Please dial again.");
+    }
+    const verified = await verifyPin(userRef, inputs[3]);
+    if (verified !== "valid") {
+      return end(verified === "locked" ?
+        "USSD PIN locked for 15 minutes. Please try again later." :
+        "Incorrect PIN. Please dial again.");
+    }
+    const amount = Number(inputs[1]);
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      return end("Invalid repayment amount. Please dial again.");
+    }
+    return createRepayment({
+      sessionId,
+      phoneNumber,
+      amount,
+      userRef,
+      user,
+      activeLoan,
+    });
+  }
+
+  if (option === "5") {
     if (inputs.length === 1) {
       return continueSession("Enter your 4-digit USSD PIN:");
     }
@@ -701,7 +825,30 @@ async function handleSession({sessionId, phoneNumber, text}) {
     return end(`Mini Statement\n${formatStatement(buildStatement(context))}`);
   }
 
-  if (option === "5") {
+  if (option === "6") {
+    if (inputs.length === 1) {
+      return continueSession("Enter your 4-digit USSD PIN:");
+    }
+    if (inputs.length !== 2 || !pinIsValid(inputs[1])) {
+      return end("Invalid PIN. Please dial again.");
+    }
+    const verified = await verifyPin(userRef, inputs[1]);
+    if (verified !== "valid") {
+      return end(verified === "locked" ?
+        "USSD PIN locked for 15 minutes. Please try again later." :
+        "Incorrect PIN. Please dial again.");
+    }
+    const context = await getMemberContext(userRef, user);
+    const scoreVal = context.member.creditScore !== undefined ? context.member.creditScore : 85;
+    const bandLabel = scoreVal >= 75 ? "Low Risk" : scoreVal >= 50 ? "Medium Risk" : "High Risk";
+    return end(
+        `Your Credit Score: ${scoreVal}/100\n` +
+        `Risk Band: ${bandLabel}\n` +
+        `Eligible Loan Limit: UGX ${Math.round(context.loanLimit)}\n` +
+        "Computed under SACCO credit assessment criteria.");
+  }
+
+  if (option === "7") {
     if (inputs.length === 1) {
       return continueSession("Enter your current 4-digit USSD PIN:");
     }
@@ -759,3 +906,7 @@ exports.ussdWebhook = onRequest(
             res, end("We could not process your request. Please try again."));
       }
     });
+
+exports.menu = menu;
+exports.phoneCandidates = phoneCandidates;
+exports.pinIsValid = pinIsValid;
