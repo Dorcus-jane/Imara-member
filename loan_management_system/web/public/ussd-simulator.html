@@ -3,54 +3,410 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Imara SACCO USSD Simulator</title>
+    <title>Imara SACCO — USSD Simulator (*123#)</title>
     <style>
-      :root { color-scheme: light; font-family: Arial, sans-serif; color: #17352b; background: #f1f5f2; }
+      :root {
+        color-scheme: light;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #17352b;
+        background: #f1f5f2;
+      }
       * { box-sizing: border-box; }
-      body { margin: 0; padding: 32px 16px; }
-      main { width: min(100%, 560px); margin: 0 auto; }
-      h1 { margin: 0 0 8px; font-size: 1.65rem; }
-      p { color: #5b6d64; line-height: 1.5; }
-      .panel { padding: 22px; background: white; border: 1px solid #dce5df; border-radius: 14px; box-shadow: 0 8px 26px #17352b0d; }
-      label { display: block; margin: 14px 0 6px; font-size: .9rem; font-weight: 700; }
-      input { width: 100%; padding: 11px 12px; border: 1px solid #cbd8d0; border-radius: 8px; font: inherit; }
-      button { padding: 11px 15px; border: 0; border-radius: 8px; background: #176844; color: white; font: inherit; font-weight: 700; cursor: pointer; }
+      body { margin: 0; padding: 24px 16px; }
+      main { width: min(100%, 580px); margin: 0 auto; }
+      h1 { margin: 0 0 4px; font-size: 1.65rem; color: #176844; }
+      p.subtitle { color: #5b6d64; margin: 0 0 16px; font-size: 0.95rem; line-height: 1.45; }
+      .panel {
+        padding: 24px;
+        background: white;
+        border: 1px solid #dce5df;
+        border-radius: 16px;
+        box-shadow: 0 8px 30px rgba(23, 104, 68, 0.08);
+      }
+      .mode-toggle {
+        display: flex;
+        background: #edf3f0;
+        border-radius: 8px;
+        padding: 4px;
+        margin-bottom: 16px;
+        gap: 4px;
+      }
+      .mode-btn {
+        flex: 1;
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #5b6d64;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .mode-btn.active {
+        background: white;
+        color: #176844;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      }
+      label { display: block; margin: 12px 0 6px; font-size: .85rem; font-weight: 700; color: #2d453b; }
+      input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #cbd8d0;
+        border-radius: 8px;
+        font: inherit;
+        font-size: 0.95rem;
+      }
+      input:focus {
+        outline: none;
+        border-color: #176844;
+        box-shadow: 0 0 0 3px rgba(23, 104, 68, 0.15);
+      }
+      .quick-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .chip {
+        padding: 4px 10px;
+        border-radius: 20px;
+        background: #eaf1ed;
+        border: 1px solid #d1dfd6;
+        font-size: 0.75rem;
+        color: #176844;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .chip:hover {
+        background: #d8e8de;
+      }
+      button.primary {
+        padding: 12px 18px;
+        border: 0;
+        border-radius: 8px;
+        background: #176844;
+        color: white;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      button.primary:hover { background: #135537; }
+      button.secondary {
+        padding: 12px 18px;
+        border: 1px solid #cbd8d0;
+        border-radius: 8px;
+        background: #f7faf8;
+        color: #17352b;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.secondary:hover { background: #eef3f0; }
       button:disabled { opacity: .5; cursor: not-allowed; }
-      .actions { display: flex; gap: 10px; margin-top: 16px; }
-      .secondary { background: #e8efeb; color: #17352b; }
-      .screen { min-height: 150px; margin-top: 20px; padding: 16px; border: 1px solid #dce5df; border-radius: 10px; background: #f9fbf9; }
-      .screen pre { margin: 0; white-space: pre-wrap; font: 1rem/1.55 ui-monospace, Consolas, monospace; }
-      .status { min-height: 1.4em; margin: 12px 0 0; color: #a3362f; font-size: .9rem; }
-      .hint { margin-top: 14px; font-size: .85rem; }
+      .actions { display: flex; gap: 10px; margin-top: 14px; }
+      
+      /* Feature Phone LCD Screen Display */
+      .phone-frame {
+        margin-top: 20px;
+        background: #0f1c16;
+        padding: 14px;
+        border-radius: 12px;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+      }
+      .screen {
+        min-height: 160px;
+        padding: 16px;
+        border-radius: 8px;
+        background: #c3d9b8;
+        color: #0d2818;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+      }
+      .screen pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 0.95rem;
+        line-height: 1.45;
+        font-weight: 700;
+      }
+      .status { min-height: 1.3em; margin: 10px 0 0; color: #a3362f; font-size: .85rem; font-weight: 600; }
+      .instructions {
+        margin-top: 20px;
+        padding: 14px 18px;
+        background: #eef5f1;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        color: #3b5247;
+        line-height: 1.5;
+      }
+      .instructions code {
+        background: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid #cbd8d0;
+        font-weight: 600;
+      }
     </style>
   </head>
   <body>
     <main>
-      <h1>USSD Simulator</h1>
-      <p>Test the <strong>*123#</strong> menu using a registered member phone number. Each submission sends the cumulative Africa’s Talking-style <code>text</code> value.</p>
+      <h1>Imara SACCO — USSD Banking</h1>
+      <p class="subtitle">Simulate the <strong>*123#</strong> feature-phone banking channel for members in Uganda.</p>
+
       <section class="panel" aria-label="USSD session">
-        <label for="endpoint">Local Functions Emulator URL</label>
-        <input id="endpoint" type="url" />
-        <label for="phone">Member phone number</label>
-        <input id="phone" type="tel" value="+256" autocomplete="tel" />
-        <div class="screen" aria-live="polite"><pre id="screen">Start a session to see the USSD menu.</pre></div>
-        <form id="reply-form" hidden>
-          <label for="reply">Your response</label>
-          <input id="reply" inputmode="numeric" autocomplete="off" />
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+          <button id="mode-demo" class="mode-btn active" type="button">⚡ Instant Demo Mode (No Setup)</button>
+          <button id="mode-emulator" class="mode-btn" type="button">🖥️ Firebase Emulator Mode</button>
+        </div>
+
+        <div id="emulator-box" style="display: none;">
+          <label for="endpoint">Functions Emulator URL</label>
+          <input id="endpoint" type="url" value="http://127.0.0.1:5001/wallet-application-1bd18/us-central1/ussdWebhook" />
+        </div>
+
+        <label for="phone">Member Phone Number</label>
+        <input id="phone" type="tel" value="+256700000001" autocomplete="tel" />
+        
+        <div class="quick-chips">
+          <span class="chip" onclick="setPhone('+256700000001')">👤 Amina Were (+256700000001)</span>
+          <span class="chip" onclick="setPhone('+256700000002')">👤 Rolex Denis (+256700000002)</span>
+          <span class="chip" onclick="setReply('1234')">🔑 Quick PIN: 1234</span>
+        </div>
+
+        <div class="phone-frame">
+          <div class="screen" aria-live="polite">
+            <pre id="screen">Dial *123# to begin your banking session.</pre>
+          </div>
+        </div>
+
+        <form id="reply-form" hidden style="margin-top: 14px;">
+          <label for="reply">Enter response / selection</label>
+          <input id="reply" inputmode="numeric" autocomplete="off" placeholder="e.g. 1234 or 1" />
           <div class="actions">
-            <button id="send" type="submit">Send</button>
-            <button id="restart" class="secondary" type="button">New session</button>
+            <button id="send" class="primary" type="submit">Send</button>
+            <button id="restart" class="secondary" type="button">End Session</button>
           </div>
         </form>
+
         <div id="start-actions" class="actions">
-          <button id="start" type="button">Dial *123#</button>
+          <button id="start" class="primary" type="button">Dial *123#</button>
         </div>
+
         <p id="status" class="status" role="status"></p>
       </section>
-      <p class="hint">Start the Functions and Firestore emulators from the project root with <code>npx firebase emulators:start --only functions,firestore</code>.</p>
+
+      <div class="instructions">
+        <strong>💡 Quick Testing Tips:</strong><br />
+        • <strong>Dial *123#</strong> → Enter PIN <code>1234</code> to access the 7-option SACCO menu.<br />
+        • <strong>Option 1</strong>: Check your savings balance, locked loan security, and active loan.<br />
+        • <strong>Option 3</strong>: Apply for an instant micro-loan based on your credit score.<br />
+        • <strong>Option 4</strong>: Repay an active loan via Mobile Money.<br />
+        • <strong>Option 6</strong>: Check your credit score (0-100) and borrowing limit.
+      </div>
     </main>
+
     <script>
-      const projectId = "wallet-application-1bd18";
+      // -------------------------------------------------------------
+      // Standalone In-Browser USSD Engine (Zero-Setup Demo Mode)
+      // -------------------------------------------------------------
+      const demoMembers = {
+        "+256700000001": {
+          name: "Amina Were",
+          firstName: "Amina",
+          phone: "+256700000001",
+          pin: "1234",
+          pinAttempts: 0,
+          savings: 1000000,
+          lockedSavings: 50000,
+          loanLimit: 3000000,
+          creditScore: 85,
+          riskBand: "Low Risk",
+          activeLoan: {
+            type: "Quick Micro-Loan",
+            balance: 150000,
+            monthly: 56000,
+            nextDueDate: "2026-12-19",
+          },
+          miniStatement: [
+            "2026-11-15: Dep UGX 100,000 (MTN)",
+            "2026-10-30: Dep UGX 150,000 (Airtel)",
+            "2026-10-15: Loan Repay UGX 56,000",
+          ],
+        },
+        "+256700000002": {
+          name: "Rolex Denis",
+          firstName: "Denis",
+          phone: "+256700000002",
+          pin: "1234",
+          pinAttempts: 0,
+          savings: 200000,
+          lockedSavings: 0,
+          loanLimit: 600000,
+          creditScore: 55,
+          riskBand: "Medium Risk",
+          activeLoan: null,
+          miniStatement: [
+            "2026-11-01: Dep UGX 200,000 (MTN)",
+          ],
+        },
+      };
+
+      function formatUGX(val) {
+        return "UGX " + Number(val).toLocaleString();
+      }
+
+      function clientSideUssdEngine(phoneNumber, text) {
+        const member = demoMembers[phoneNumber];
+        if (!member) {
+          return "END Your phone number is not registered with Imara SACCO. Please register in the mobile app or visit your branch.";
+        }
+
+        const parts = text ? text.split("*").map((s) => s.trim()) : [];
+
+        // Prompt PIN
+        if (parts.length === 0 || (parts.length === 1 && parts[0] === "")) {
+          return `CON Welcome to Imara SACCO, ${member.firstName}!\nEnter your 4-digit USSD PIN:`;
+        }
+
+        const enteredPin = parts[0];
+        if (enteredPin !== member.pin) {
+          member.pinAttempts++;
+          if (member.pinAttempts >= 3) {
+            return "END PIN locked after 3 incorrect attempts. Please contact Imara SACCO support.";
+          }
+          return `END Incorrect PIN (${3 - member.pinAttempts} attempts remaining). Please dial *123# again.`;
+        }
+        member.pinAttempts = 0;
+
+        // Main Menu
+        if (parts.length === 1) {
+          return "CON Imara SACCO Menu:\n" +
+                 "1. Check Balance\n" +
+                 "2. Deposit (MoMo)\n" +
+                 "3. Apply for Quick Loan\n" +
+                 "4. Repay Active Loan\n" +
+                 "5. Mini Statement\n" +
+                 "6. Check Credit Score\n" +
+                 "7. Change USSD PIN";
+        }
+
+        const opt = parts[1];
+
+        // 1. Check Balance
+        if (opt === "1") {
+          const avail = Math.max(0, member.savings - member.lockedSavings);
+          let msg = `Total Savings: ${formatUGX(member.savings)}\nAvailable: ${formatUGX(avail)}`;
+          if (member.lockedSavings > 0) msg += `\nLocked Collateral: ${formatUGX(member.lockedSavings)}`;
+          if (member.activeLoan) msg += `\nActive Loan: ${formatUGX(member.activeLoan.balance)}\nDue: ${member.activeLoan.nextDueDate}`;
+          else msg += `\nActive Loan: None`;
+          return `END ${msg}`;
+        }
+
+        // 2. Deposit
+        if (opt === "2") {
+          if (parts.length === 2) return "CON Enter deposit amount (UGX):\n(Min: UGX 5,000)";
+          const amt = Number(parts[2]);
+          if (isNaN(amt) || amt < 5000) return "END Invalid deposit amount. Minimum is UGX 5,000.";
+          member.savings += amt;
+          member.miniStatement.unshift(`${new Date().toISOString().slice(0, 10)}: Dep ${formatUGX(amt)} (USSD)`);
+          return `END Prompt sent to ${member.phone}!\nEnter your Mobile Money PIN on your phone to complete deposit of ${formatUGX(amt)}.`;
+        }
+
+        // 3. Quick Loan
+        if (opt === "3") {
+          if (member.activeLoan && member.activeLoan.balance > 0) {
+            return `END You have an active loan of ${formatUGX(member.activeLoan.balance)}.\nSACCO policy permits one active loan at a time.`;
+          }
+          if (parts.length === 2) {
+            return `CON Your loan limit: ${formatUGX(member.loanLimit)}\nEnter loan amount to borrow:`;
+          }
+          const loanAmt = Number(parts[2]);
+          if (isNaN(loanAmt) || loanAmt < 50000 || loanAmt > member.loanLimit) {
+            return `END Invalid loan amount. Must be between UGX 50,000 and ${formatUGX(member.loanLimit)}.`;
+          }
+          if (parts.length === 3) {
+            return `CON Select term for ${formatUGX(loanAmt)}:\n1. 1 Month\n2. 3 Months\n3. 6 Months`;
+          }
+          const termMap = { "1": 1, "2": 3, "3": 6 };
+          const term = termMap[parts[3]];
+          if (!term) return "END Invalid term choice.";
+          if (parts.length === 4) {
+            const monthly = Math.round((loanAmt * 1.12) / term);
+            return `CON Loan: ${formatUGX(loanAmt)} for ${term}m\nMonthly: ${formatUGX(monthly)}\n1. Confirm & Disburse\n2. Cancel`;
+          }
+          if (parts[4] === "1") {
+            const monthly = Math.round((loanAmt * 1.12) / term);
+            member.activeLoan = {
+              type: "Quick Micro-Loan",
+              balance: Math.round(loanAmt * 1.12),
+              monthly,
+              nextDueDate: "2026-12-20",
+            };
+            member.lockedSavings = Math.round(loanAmt / 3);
+            return `END Success! ${formatUGX(loanAmt)} disbursed to ${member.phone}.\nFirst instalment of ${formatUGX(monthly)} due in 30 days.\nThank you for choosing Imara SACCO.`;
+          }
+          return "END Loan application cancelled.";
+        }
+
+        // 4. Repay Active Loan
+        if (opt === "4") {
+          if (!member.activeLoan || member.activeLoan.balance <= 0) {
+            return "END You have no active loan to repay.";
+          }
+          if (parts.length === 2) {
+            return `CON Outstanding: ${formatUGX(member.activeLoan.balance)}\nMonthly: ${formatUGX(member.activeLoan.monthly)}\n\nEnter repayment amount (UGX):`;
+          }
+          const repayAmt = Number(parts[2]);
+          if (isNaN(repayAmt) || repayAmt <= 0) return "END Invalid repayment amount.";
+          const paid = Math.min(repayAmt, member.activeLoan.balance);
+          member.activeLoan.balance -= paid;
+          let finishMsg = "";
+          if (member.activeLoan.balance <= 0) {
+            member.activeLoan = null;
+            member.lockedSavings = 0;
+            finishMsg = "Loan fully repaid! Collateral savings released.";
+          } else {
+            finishMsg = `Remaining balance: ${formatUGX(member.activeLoan.balance)}`;
+          }
+          return `END Prompt sent to ${member.phone}!\nEnter MoMo PIN to complete repayment of ${formatUGX(repayAmt)}.\n${finishMsg}`;
+        }
+
+        // 5. Mini Statement
+        if (opt === "5") {
+          const list = member.miniStatement.slice(0, 3).join("\n");
+          return `END Mini Statement:\n${list || "No recent transactions."}\nSavings: ${formatUGX(member.savings)}`;
+        }
+
+        // 6. Check Credit Score
+        if (opt === "6") {
+          return `END Credit Score: ${member.creditScore}/100\nRisk Band: ${member.riskBand}\nBorrowing Limit: ${formatUGX(member.loanLimit)}\nBased on savings consistency & credit history.`;
+        }
+
+        // 7. Change PIN
+        if (opt === "7") {
+          if (parts.length === 2) return "CON Enter your NEW 4-digit PIN:";
+          const newPin = parts[2];
+          if (!/^\d{4}$/.test(newPin)) return "END Invalid PIN. Must be exactly 4 digits.";
+          if (parts.length === 3) return "CON Confirm your NEW 4-digit PIN:";
+          if (parts[3] !== newPin) return "END PINs do not match. Change PIN cancelled.";
+          member.pin = newPin;
+          return "END USSD PIN changed successfully! Please use your new PIN for future sessions.";
+        }
+
+        return "END Invalid menu selection. Please dial *123# again.";
+      }
+
+      // -------------------------------------------------------------
+      // UI Wiring
+      // -------------------------------------------------------------
+      let mode = "demo"; // "demo" or "emulator"
+      const modeDemo = document.getElementById("mode-demo");
+      const modeEmulator = document.getElementById("mode-emulator");
+      const emulatorBox = document.getElementById("emulator-box");
       const endpoint = document.getElementById("endpoint");
       const phone = document.getElementById("phone");
       const screen = document.getElementById("screen");
@@ -61,7 +417,30 @@
       const restart = document.getElementById("restart");
       const send = document.getElementById("send");
       const status = document.getElementById("status");
-      endpoint.value = `http://127.0.0.1:5001/${projectId}/us-central1/ussdWebhook`;
+
+      modeDemo.addEventListener("click", () => {
+        mode = "demo";
+        modeDemo.classList.add("active");
+        modeEmulator.classList.remove("active");
+        emulatorBox.style.display = "none";
+        status.textContent = "";
+      });
+
+      modeEmulator.addEventListener("click", () => {
+        mode = "emulator";
+        modeEmulator.classList.add("active");
+        modeDemo.classList.remove("active");
+        emulatorBox.style.display = "block";
+        status.textContent = "";
+      });
+
+      function setPhone(num) {
+        phone.value = num;
+      }
+
+      function setReply(val) {
+        reply.value = val;
+      }
 
       let sessionId = "";
       let cumulativeText = "";
@@ -70,6 +449,31 @@
       async function submit(text) {
         status.textContent = "";
         send.disabled = true;
+
+        if (mode === "demo") {
+          const rawResponse = clientSideUssdEngine(phone.value.trim(), text);
+          let message = rawResponse;
+          if (message.startsWith("CON ")) {
+            message = message.substring(4);
+            active = true;
+          } else if (message.startsWith("END ")) {
+            message = message.substring(4);
+            active = false;
+          } else {
+            active = false;
+          }
+          screen.textContent = message;
+          replyForm.hidden = !active;
+          startActions.hidden = active;
+          if (active) {
+            reply.value = "";
+            reply.focus();
+          }
+          send.disabled = false;
+          return;
+        }
+
+        // Emulator Mode: HTTP POST to local emulator
         try {
           const response = await fetch(endpoint.value.trim(), {
             method: "POST",
@@ -81,10 +485,14 @@
               text,
             }),
           });
-          const message = (await response.text()).trim();
+          const rawMessage = (await response.text()).trim();
+          let message = rawMessage;
+          active = message.startsWith("CON ");
+          if (message.startsWith("CON ")) message = message.substring(4);
+          else if (message.startsWith("END ")) message = message.substring(4);
+
           screen.textContent = message || "No response received.";
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          active = message.startsWith("CON ");
           replyForm.hidden = !active;
           startActions.hidden = active;
           if (active) {
@@ -92,7 +500,7 @@
             reply.focus();
           }
         } catch (error) {
-          status.textContent = `Could not reach the emulator: ${error.message}`;
+          status.textContent = `Could not reach emulator: ${error.message}. Switch to "Instant Demo Mode" above to test without emulator.`;
           active = false;
           replyForm.hidden = true;
           startActions.hidden = false;
@@ -103,16 +511,22 @@
 
       function startSession() {
         if (!phone.value.trim()) {
-          status.textContent = "Enter the registered member phone number first.";
+          status.textContent = "Enter a member phone number first.";
           return;
         }
-        sessionId = `sim-${crypto.randomUUID()}`;
+        sessionId = `sim-${Date.now()}`;
         cumulativeText = "";
         submit(cumulativeText);
       }
 
       start.addEventListener("click", startSession);
-      restart.addEventListener("click", startSession);
+      restart.addEventListener("click", () => {
+        active = false;
+        replyForm.hidden = true;
+        startActions.hidden = false;
+        screen.textContent = "Session ended. Dial *123# to begin a new session.";
+      });
+
       replyForm.addEventListener("submit", (event) => {
         event.preventDefault();
         if (!active || !reply.value.trim()) return;
